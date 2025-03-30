@@ -1,0 +1,18 @@
+{
+    "manifest_version": 3,
+    "name": "YT Music Status Sync",
+    "version": "1.0",
+    "description": "Sync with YouTube Music information to Discord",
+    "permissions": [],
+    "host_permissions": ["https://music.youtube.com/*", "https://www.youtube.com/*"],
+    "content_scripts": [
+      {
+        "matches": ["https://music.youtube.com/*", "https://www.youtube.com/*"],
+        "js": ["content.js"]
+      }
+    ],
+    "icons": {
+      "128": "icon.png"
+    }
+  }
+  

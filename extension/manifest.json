@@ -1,18 +1,20 @@
 {
-    "manifest_version": 3,
-    "name": "YT Music Status Sync",
-    "version": "1.0",
-    "description": "Sync with YouTube Music information to Discord",
-    "permissions": [],
-    "host_permissions": ["https://music.youtube.com/*", "https://www.youtube.com/*"],
-    "content_scripts": [
-      {
-        "matches": ["https://music.youtube.com/*", "https://www.youtube.com/*"],
-        "js": ["content.js"]
-      }
-    ],
-    "icons": {
-      "128": "icon.png"
+  "manifest_version": 3,
+  "name": "YT Discord RPC",
+  "version": "1.0",
+  "permissions": ["scripting","storage"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://www.youtube.com/*", "*://music.youtube.com/*"],
+      "js": ["content.js"]
     }
-  }
-  
+  ],
+  "action": {
+  "default_popup": "popup.html"
+}
+
+}

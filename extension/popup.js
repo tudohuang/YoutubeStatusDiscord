@@ -7,11 +7,10 @@ chrome.storage.local.get("latestRPC", (result) => {
       return;
     }
     function upscaleArtwork(url) {
-        // 如果是 Googleusercontent 封面圖，放大
         if (url.includes("googleusercontent.com")) {
           return url.replace(/=w\d+-h\d+.*$/, "=w600-h600");
         }
-        return url; // 其他來源不動
+        return url; 
       }
       
     document.getElementById("title").textContent = data.title || "未知標題";

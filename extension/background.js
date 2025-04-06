@@ -1,26 +1,20 @@
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "UPDATE_RPC") {
-      const data = message.payload;
+chrome.runtime.onMessage.addListener((msg) => {
+    if (msg.type !== "UPDATE_RPC") return;
   
-      chrome.storage.local.get("rpcEnabled", (res) => {
-        if (res.rpcEnabled === false) {
-          console.log("🚫 [背景頁] RPC 傳送已關閉");
-          return;
-        }
+    chrome.storage.local.get("rpcEnabled", (res) => {
+      if (res.rpcEnabled === false) return;
   
-        fetch("http://127.0.0.1:3000", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
+      fetch("http://127.0.0.1:3000", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(msg.payload)
+      })
+        .then(r => {
+          if (!r.ok) throw new Error(`Server ${r.status}`);
+          chrome.storage.local.set({ latestRPC: msg.payload });
+          console.log("✅ Sent:", msg.payload.title || "(No Title)");
         })
-          .then(res => {
-            if (!res.ok) throw new Error(`伺服器錯誤：${res.status}`);
-            console.log("✅ [背景頁] 傳送成功", data);
-            chrome.storage.local.set({ latestRPC: data }); // 🧠 存起來給 popup 用
-          })
-          .catch(err => {
-            console.error("❌ [背景頁] 傳送失敗", err.message || err);
-          });
-      });
-    }
+        .catch(e => console.error("❌ RPC Failed:", e.message));
+    });
   });
+  

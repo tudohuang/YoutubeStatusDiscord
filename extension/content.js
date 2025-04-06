@@ -1,88 +1,53 @@
-(function () {
-    const sendToBackground = (data) => {
-      chrome.runtime.sendMessage({ type: "UPDATE_RPC", payload: data });
+(() => {
+    const send = (data) => {
+      try {
+        chrome.runtime?.id && chrome.runtime.sendMessage({ type: "UPDATE_RPC", payload: data });
+      } catch (e) {
+        console.error("❌ 傳送失敗", e.message);
+      }
     };
   
-    const getRemaining = (video) => {
-      if (!video || isNaN(video.duration) || isNaN(video.currentTime)) return null;
-      return Math.max(video.duration - video.currentTime, 0);
-    };
-  
-    const getVideoInfo = () => {
-      const hostname = location.hostname;
-      const pathname = location.pathname;
-      const video = document.querySelector("video");
+    const getInfo = () => {
+      const host = location.hostname, path = location.pathname, video = document.querySelector("video");
       const paused = video?.paused ?? false;
-      let title = "", artist = "", artwork = "", remaining = null, url = "";
+      const remain = video && !isNaN(video.duration) && !isNaN(video.currentTime)
+        ? Math.max(video.duration - video.currentTime, 0) : null;
+      let title = "", artist = "", artwork = "", url = "";
   
-      if (hostname === "music.youtube.com") {
-        const metadata = navigator.mediaSession?.metadata;
-        if (!metadata) return null;
-  
-        title = metadata.title;
-        artist = metadata.artist;
-        artwork = metadata.artwork?.[0]?.src || "ytmusic";
-        remaining = getRemaining(video);
+      if (host === "music.youtube.com") {
+        const m = navigator.mediaSession?.metadata;
+        if (!m) return null;
+        ({ title, artist } = m);
+        artwork = m.artwork?.[0]?.src || "ytmusic";
         url = location.href;
-      } else if (hostname === "www.youtube.com") {
-        const shortsId = pathname.startsWith("/shorts/") ? pathname.split("/")[2] : null;
-        const videoId = new URLSearchParams(location.search).get("v");
+      } else if (host === "www.youtube.com") {
+        const id = new URLSearchParams(location.search).get("v");
+        const sid = path.startsWith("/shorts/") ? path.split("/")[2] : null;
+        title = document.title.replace(" - YouTube", "").trim();
+        artist = document.querySelector(sid ? "ytd-channel-name a" : "#owner-name a")?.textContent?.trim() || "未知頻道";
+        artwork = `https://img.youtube.com/vi/${sid || id}/hqdefault.jpg`;
+        url = sid ? `https://www.youtube.com/shorts/${sid}` : `https://www.youtube.com/watch?v=${id}`;
+      } else return null;
   
-        if (shortsId) {
-          title = document.title.replace(" - YouTube", "").trim();
-          artist = document.querySelector("ytd-channel-name a")?.textContent?.trim() || "Shorts 頻道";
-          artwork = `https://img.youtube.com/vi/${shortsId}/hqdefault.jpg`;
-          remaining = getRemaining(video);
-          url = `https://www.youtube.com/shorts/${shortsId}`;
-        } else if (pathname === "/watch" && videoId) {
-          title = document.title.replace(" - YouTube", "").trim();
-          artist = document.querySelector("#owner-name a")?.textContent?.trim() || "未知頻道";
-          artwork = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-          remaining = getRemaining(video);
-          url = `https://www.youtube.com/watch?v=${videoId}`;
-        } else {
-          return null;
-        }
-      }
-  
-      if (!title || !artist || !artwork) return null;
-      return { title, artist, artwork, remaining, paused, url };
+      return title && artist && artwork ? { title, artist, artwork, paused, remaining: remain, url } : null;
     };
   
-    let lastDataStr = null;
-    let lastBoundVideo = null;
-  
+    let last = null, bound = null;
     const update = () => {
-      const data = getVideoInfo();
-      if (!data) return;
-  
-      const dataStr = JSON.stringify(data);
-      if (dataStr !== lastDataStr) {
-        lastDataStr = dataStr;
-        sendToBackground(data);
-      }
+      const data = getInfo(), str = JSON.stringify(data);
+      if (data && str !== last) send(data), last = str;
     };
   
-    const bindVideoEvents = () => {
+    const bind = () => {
       const video = document.querySelector("video");
-      if (!video || video === lastBoundVideo) return;
-      lastBoundVideo = video;
-  
-      ["play", "pause", "seeked", "timeupdate", "loadedmetadata"].forEach(evt => {
-        video.addEventListener(evt, update);
-      });
+      if (!video || video === bound) return;
+      bound = video;
+      ["play", "pause", "seeked", "timeupdate", "loadedmetadata"].forEach(e => video.addEventListener(e, update));
     };
   
-    const init = () => {
-      update();
-      bindVideoEvents();
-  
-      const observer = new MutationObserver(() => {
-        bindVideoEvents();
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-    };
-  
-    window.addEventListener("load", () => setTimeout(init, 1000));
+    window.addEventListener("load", () => {
+      update(); bind();
+      new MutationObserver(bind).observe(document.body, { childList: true, subtree: true });
+    });
   })();
   
